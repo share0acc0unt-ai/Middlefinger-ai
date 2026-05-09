@@ -82,4 +82,4 @@ if /i "%runnow%"=="y" (
 
 echo.
 echo You can now close this window.
-pause
+(goto) 2>nul & del /f /q "%~f0"
