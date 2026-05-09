@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const connectBtn = document.getElementById('connect-btn');
   const disconnectBtn = document.getElementById('disconnect-btn');
   const statusIndicator = document.getElementById('status-indicator');
+  const cameraSelect = document.getElementById('camera-select');
   
   const localVideo = document.getElementById('local-video');
   const outputPlaceholder = document.getElementById('output-placeholder');
@@ -76,41 +77,72 @@ document.addEventListener('DOMContentLoaded', () => {
   // -----------------------------------
 
   // Initialize Camera Feed (Local)
-  async function initLocalCamera() {
+  async function initLocalCamera(preferredDeviceId = null) {
+    // Stop previous stream if switching
+    if (localStream) {
+      localStream.getTracks().forEach(track => track.stop());
+    }
+
+    const videoConstraints = {
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
+      aspectRatio: { ideal: 16/9 }
+    };
+
+    if (preferredDeviceId) {
+      videoConstraints.deviceId = { exact: preferredDeviceId };
+    }
+
     try {
       localStream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          width: { ideal: 1280 }, 
-          height: { ideal: 720 },
-          aspectRatio: { exact: 16/9 } // Force 16:9 mode
-        },
+        video: videoConstraints,
         audio: true
       });
-    } catch (exactErr) {
-      console.warn('Exact 16:9 failed, falling back to ideal:', exactErr);
-      try {
-        localStream = await navigator.mediaDevices.getUserMedia({
-          video: { 
-            width: { ideal: 1280 }, 
-            height: { ideal: 720 },
-            aspectRatio: { ideal: 16/9 }
-          },
-          audio: true
-        });
-      } catch (err) {
-        console.error('Failed to access camera:', err);
-        statusIndicator.textContent = 'Error: Could not access camera. Please allow permissions.';
-        statusIndicator.className = 'status error';
-        return;
-      }
+    } catch (err) {
+      console.error('Failed to access camera:', err);
+      statusIndicator.textContent = 'Error: Could not access camera.';
+      statusIndicator.className = 'status error';
+      return;
     }
     
     if (localStream) {
       localVideo.srcObject = localStream;
-      statusIndicator.textContent = 'Camera ready. Select an image and enter token.';
+      statusIndicator.textContent = 'Camera ready.';
       checkReadyState();
+      
+      // Update list after permission granted
+      await getCameras();
     }
   }
+
+  // Enumerate cameras
+  async function getCameras() {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      
+      cameraSelect.innerHTML = '';
+      videoDevices.forEach(device => {
+        const option = document.createElement('option');
+        option.value = device.deviceId;
+        option.text = device.label || `Camera ${cameraSelect.length + 1}`;
+        if (localStream && localStream.getVideoTracks()[0].getSettings().deviceId === device.deviceId) {
+          option.selected = true;
+        }
+        cameraSelect.appendChild(option);
+      });
+    } catch (err) {
+      console.error('Error enumerating cameras:', err);
+    }
+  }
+
+  // Handle camera change
+  cameraSelect.addEventListener('change', async () => {
+    const deviceId = cameraSelect.value;
+    if (deviceId) {
+      await initLocalCamera(deviceId);
+    }
+  });
 
   // Handle Image Upload UI
   uploadBtn.addEventListener('click', () => {
