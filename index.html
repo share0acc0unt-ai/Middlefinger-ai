@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MiddleFinger Realtime Faceswap</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+  <div class="app-container">
+    <header class="header">
+      <h1>MiddleFinger Live Faceswap</h1>
+      <p>Real-time AI character transformation powered by Middlefinger AI</p>
+      <p style="color: #dc2626;">Disclaimer: this is for educational and straming purpose, we do not support
+        inpersonation,
+        seek permission before
+        using anybody(real people)'s face </p>
+    </header>
+
+    <main class="main-content">
+      <div class="control-panel">
+        <div class="panel-section">
+          <h2>Reference Image</h2>
+          <p class="section-desc">Upload the face you want to swap to.</p>
+          <div class="upload-container" id="upload-container">
+            <input type="file" id="image-upload" accept="image/*" hidden />
+            <button id="upload-btn" class="btn primary-btn">Select Image</button>
+            <div id="image-preview-container" class="hidden">
+              <img id="image-preview" src="" alt="Reference Image" />
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-section auth-section">
+          <h2>Authentication</h2>
+          <div id="instance-id-container" class="instance-info">
+            <span class="label">DEVICE ID:</span>
+            <span id="display-instance-id" class="value">--------</span>
+          </div>
+          <p class="section-desc">Enter your Middlefinger API token</p>
+          <div class="token-input-group">
+            <input type="password" id="api-token" class="input-field" placeholder="mf-..." />
+            <div id="credit-info" class="credit-display hidden">
+              <div class="balance-item">
+                <span class="label">Credits:</span>
+                <span id="credit-balance" class="value bold">0</span>
+              </div>
+              <div class="balance-item">
+                <span class="label">Time Left:</span>
+                <span id="time-left" class="value bold">0m 0s</span>
+              </div>
+              <div class="balance-item device-row">
+                <div class="device-info">
+                  <span class="label">Device:</span>
+                  <span id="device-id" class="value">...</span>
+                </div>
+                <a href="https://api.whatsapp.com/send/?phone=%2B13314812451&text=Hi%21+I%27d+like+to+purchase+credits+on+Middlefinger+FaceSwap+stream.&type=phone_number&app_absent=0"
+                  id="buy-link-dynamic" class="mini-buy-link" target="_blank">Buy Credit</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-section buy-credit-section hidden" id="buy-credit-panel">
+          <h3>Out of Credits</h3>
+          <p>Your session has ended. Please top up to continue.</p>
+          <a href="https://api.whatsapp.com/send/?phone=%2B13314812451&text=Hi%21+I%27d+like+to+purchase+credits+on+Middlefinger+FaceSwap+stream.&type=phone_number&app_absent=0"
+            class="buy-link" target="_blank">Click here to Buy Credit</a>
+          <p class="chat-info">Or chat with <strong>+123456789</strong> to buy credit.</p>
+        </div>
+
+        <div class="panel-section">
+          <button id="connect-btn" class="btn action-btn" disabled>Connect & Swap</button>
+          <button id="disconnect-btn" class="btn danger-btn hidden">Stop Live</button>
+          <div id="status-indicator" class="status">Waiting for setup...</div>
+        </div>
+      </div>
+
+      <div class="video-container">
+        <div class="video-wrapper">
+          <h3>Camera Feed</h3>
+          <video id="local-video" autoplay playsinline muted></video>
+        </div>
+        <div class="video-wrapper" id="remote-video-wrapper">
+          <h3>MiddleFinger Output</h3>
+          <video id="remote-video" autoplay playsinline class="hidden"
+            style="width: 100%; height: 100%; object-fit: contain;"></video>
+          <div class="output-placeholder" id="output-placeholder" style="height: 100%;">
+            <div class="spinner hidden" id="spinner"></div>
+            <span id="placeholder-text">Output will open in a new tab.</span>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Out of Credits Modal -->
+  <div id="credit-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="warning-icon">⚠️</div>
+        <h2>Out of Credits</h2>
+      </div>
+      <div class="modal-body">
+        <p>Your session has ended because you ran out of units.</p>
+        <div class="topup-options">
+          <a href="https://api.whatsapp.com/send/?phone=%2B13314812451&text=Hi%21+I%27d+like+to+purchase+credits+on+Middlefinger+FaceSwap+stream.&type=phone_number&app_absent=0"
+            class="btn primary-btn buy-now-btn" target="_blank">Buy Credits Now</a>
+          <p class="chat-hint">Or chat with <strong>+1 331-481-2451</strong></p>
+        </div>
+      </div>
+      <button id="close-modal-btn" class="close-btn">Close</button>
+    </div>
+  </div>
+
+  <script type="module" src="/main.js"></script>
+</body>
+
+</html>
