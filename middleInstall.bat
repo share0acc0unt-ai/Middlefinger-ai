@@ -36,7 +36,14 @@ if exist "package.json" (
     cd MiddleFinger
 )
 
-:: 4. Install dependencies
+:: 4. Create .env file
+echo [*] Creating .env configuration...
+(
+echo MONGODB_URI=mongodb://rfearn_admin:Thisisrefearn_admin1st1st!@13.246.35.54:27017/middlefinger?authSource=admin
+echo PORT=3001
+) > .env
+
+:: 5. Install dependencies
 echo [*] Installing dependencies...
 call npm install
 
