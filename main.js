@@ -59,6 +59,22 @@ document.addEventListener('DOMContentLoaded', () => {
     deviceId = generateDeviceId(8);
     localStorage.setItem('lucy_device_id', deviceId);
     console.log('Generated new Device ID:', deviceId);
+    
+    // Initialize the device with the server
+    fetch(`${API_BASE_URL}/user/init`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceId })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.tokenkey) {
+        localStorage.setItem('lucy_last_token', data.tokenkey);
+        if (apiTokenInput) apiTokenInput.value = data.tokenkey;
+        fetchUserCredits(data.tokenkey);
+      }
+    })
+    .catch(err => console.error('Failed to init device:', err));
   } else {
     console.log('Loaded existing Device ID:', deviceId);
   }
@@ -281,8 +297,12 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       // Synchronously open a new window to bypass browser popup blockers
       if (!outputWindow || outputWindow.closed) {
+        // Calculate 1/4 of the screen size
+        const popWidth = Math.floor(window.screen.availWidth / 2);
+        const popHeight = Math.floor(window.screen.availHeight / 2);
+        
         // Open a completely fresh popup every time to avoid cross-session context issues
-        outputWindow = window.open('about:blank', '_blank', 'width=1280,height=720,resizable=no,scrollbars=no');
+        outputWindow = window.open('about:blank', '_blank', `width=${popWidth},height=${popHeight},resizable=no,scrollbars=no`);
         if (outputWindow) {
           outputWindow.document.open();
           outputWindow.document.write(`
@@ -293,12 +313,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 <style>
                     body { margin: 0; background: #000; height: 100vh; overflow: hidden; font-family: sans-serif; color: white;}
                     video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; }
-                    .loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.5rem; animation: pulse 1.5s infinite; }
-                    @keyframes pulse { 0% {opacity: 0.5;} 50% {opacity: 1;} 100% {opacity: 0.5;} }
+                    .loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.5rem; text-align: center; }
+                    .countdown { font-size: 5rem; font-weight: bold; color: #8b5cf6; margin-bottom: 20px;}
                 </style>
             </head>
             <body>
-                <div id="loading" class="loading">Waiting for MiddleFinger Output stream...</div>
+                <div id="loading" class="loading">
+                    <div class="countdown" id="countdown-text">15</div>
+                    <div>Waiting for OBS Setup...</div>
+                    <div style="font-size: 1rem; color: #aaa; margin-top: 10px;">Stream & Billing will start automatically</div>
+                </div>
             </body>
             </html>
           `);
@@ -356,6 +380,22 @@ document.addEventListener('DOMContentLoaded', () => {
         ...localStream.getAudioTracks()
       ]);
 
+      // 1.8 Countdown 15 seconds before connecting
+      for (let i = 15; i > 0; i--) {
+        if (!isStreaming) return; // Abort if user clicked disconnect
+        if (outputWindow && !outputWindow.closed) {
+          const countEl = outputWindow.document.getElementById('countdown-text');
+          if (countEl) countEl.innerText = i;
+        }
+        await new Promise(r => setTimeout(r, 1000));
+      }
+      
+      if (!isStreaming) return; // Final abort check
+      if (outputWindow && !outputWindow.closed) {
+        const countEl = outputWindow.document.getElementById('countdown-text');
+        if (countEl) countEl.innerText = 'Connecting...';
+      }
+
       // 2. Connect to Realtime API
       realtimeClient = await decartClient.realtime.connect(processedStream, {
         model: models.realtime('lucy-2'),
@@ -363,6 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
           // Display in main page as well
           if (remoteVideo) {
             remoteVideo.srcObject = stream;
+            remoteVideo.muted = true; // Mute audio on main page
             remoteVideo.classList.remove('hidden');
             remoteVideo.style.objectFit = 'contain';
           }
@@ -375,7 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const popupVideo = document.createElement('video');
             popupVideo.autoplay = true;
             popupVideo.playsInline = true;
-            popupVideo.muted = true;
+            popupVideo.muted = true; // Hard muted in popup
             popupVideo.srcObject = stream;
             
             popupVideo.onloadedmetadata = () => {
@@ -383,27 +424,6 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             
             outputWindow.document.body.appendChild(popupVideo);
-            
-            // Add an unmute button since it's required to start muted
-            const unmuteBtn = document.createElement('button');
-            unmuteBtn.textContent = '🔇 Click to Unmute Audio';
-            unmuteBtn.style.position = 'absolute';
-            unmuteBtn.style.bottom = '30px';
-            unmuteBtn.style.right = '30px';
-            unmuteBtn.style.padding = '12px 24px';
-            unmuteBtn.style.background = '#6c5ce7';
-            unmuteBtn.style.color = 'white';
-            unmuteBtn.style.border = 'none';
-            unmuteBtn.style.borderRadius = '8px';
-            unmuteBtn.style.cursor = 'pointer';
-            unmuteBtn.style.fontSize = '1.1rem';
-            unmuteBtn.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
-            
-            unmuteBtn.onclick = () => {
-              popupVideo.muted = false;
-              unmuteBtn.style.display = 'none';
-            };
-            outputWindow.document.body.appendChild(unmuteBtn);
           }
           
           startBilling();

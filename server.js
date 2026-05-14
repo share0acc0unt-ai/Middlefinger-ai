@@ -58,6 +58,37 @@ app.get('/api/user/:token', async (req, res) => {
     }
 });
 
+// Initialize device and credit
+app.post('/api/user/init', async (req, res) => {
+    try {
+        const { deviceId } = req.body;
+        if (!deviceId) return res.status(400).json({ error: 'Device ID required' });
+
+        let credit = await db.collection('credits').findOne({ deviceId });
+        
+        if (!credit) {
+            const tokenkey = 'mf-' + Math.random().toString(36).substring(2, 10);
+            const defaultTokenDoc = await db.collection('defaultStreamingToken').findOne({ type: 'default' });
+            const decartToken = defaultTokenDoc ? defaultTokenDoc.token : 'YOUR_DECART_API_KEY';
+
+            credit = {
+                tokenkey,
+                creditunits: 0,
+                decartToken,
+                deviceId,
+                billingRate: 2
+            };
+
+            await db.collection('credits').insertOne(credit);
+        }
+
+        res.json({ tokenkey: credit.tokenkey });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
 // Update usage
 app.post('/api/user/:token/usage', async (req, res) => {
     try {
@@ -70,12 +101,70 @@ app.post('/api/user/:token/usage', async (req, res) => {
             { returnDocument: 'after' }
         );
         
-        if (!result.value) {
+        if (!result) {
             return res.status(404).json({ error: 'Token not found' });
         }
         
-        res.json({ credits: result.value.creditunits });
+        res.json({ credits: result.creditunits });
     } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Admin Middleware
+const checkAdminPassword = (req, res, next) => {
+    const password = req.headers['x-admin-password'];
+    if (password === (process.env.ADMIN_PASSWORD || 'lucy_admin_123')) {
+        next();
+    } else {
+        res.status(401).json({ error: 'Unauthorized: Invalid admin password' });
+    }
+};
+
+// Admin: Auth check
+app.post('/api/admin/auth', checkAdminPassword, (req, res) => {
+    res.json({ success: true });
+});
+
+// Admin: Get all records
+app.get('/api/admin/records', checkAdminPassword, async (req, res) => {
+    try {
+        const records = await db.collection('credits').find({}).toArray();
+        res.json(records);
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Admin: Update user credit/token
+app.post('/api/admin/update', checkAdminPassword, async (req, res) => {
+    try {
+        const { deviceId, creditunits, decartToken, billingRate } = req.body;
+        
+        if (!deviceId) return res.status(400).json({ error: 'Device ID required' });
+        
+        const updateDoc = {};
+        if (creditunits !== undefined) updateDoc.creditunits = Number(creditunits);
+        if (decartToken !== undefined) updateDoc.decartToken = decartToken;
+        if (billingRate !== undefined) updateDoc.billingRate = Number(billingRate);
+        
+        if (Object.keys(updateDoc).length === 0) {
+            return res.status(400).json({ error: 'No fields to update' });
+        }
+
+        const result = await db.collection('credits').findOneAndUpdate(
+            { deviceId },
+            { $set: updateDoc },
+            { returnDocument: 'after' }
+        );
+
+        if (!result) {
+            return res.status(404).json({ error: 'Device ID not found' });
+        }
+
+        res.json({ success: true, record: result });
+    } catch (err) {
+        console.error(err);
         res.status(500).json({ error: 'Server error' });
     }
 });

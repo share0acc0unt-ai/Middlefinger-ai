@@ -27,7 +27,14 @@ async function init() {
             { upsert: true }
         );
 
-        console.log('Successfully initialized credits table.');
+        const defaultStreamingTokens = db.collection('defaultStreamingToken');
+        await defaultStreamingTokens.updateOne(
+            { type: 'default' },
+            { $set: { token: 'YOUR_DECART_API_KEY' } },
+            { upsert: true }
+        );
+
+        console.log('Successfully initialized credits table and defaultStreamingToken collection.');
         console.log('Token Key: mf-test-token');
         console.log('Units: 1000');
     } catch (err) {

@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lucy Admin Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --surface: #1e293b;
+            --primary: #8b5cf6;
+            --primary-hover: #7c3aed;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --danger: #ef4444;
+            --border: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Glassmorphism Auth Overlay */
+        #auth-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(12px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: opacity 0.3s ease;
+        }
+
+        .auth-card {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .auth-card h2 {
+            margin-bottom: 24px;
+            font-weight: 600;
+            background: linear-gradient(to right, #a78bfa, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: white;
+            font-size: 1rem;
+            margin-bottom: 16px;
+            transition: all 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        /* Dashboard Layout */
+        .header {
+            padding: 24px 48px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(8px);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .logout-btn {
+            width: auto;
+            background: transparent;
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+        }
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .container {
+            padding: 48px;
+            flex: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Table Styles */
+        .table-wrapper {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            background: rgba(15, 23, 42, 0.4);
+            padding: 16px 24px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.875rem;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+
+        .btn-edit {
+            background: rgba(139, 92, 246, 0.1);
+            color: var(--primary);
+            padding: 6px 12px;
+            width: auto;
+            font-size: 0.875rem;
+        }
+        .btn-edit:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Edit Modal */
+        #edit-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        #edit-modal.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal-content {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px;
+            width: 100%;
+            max-width: 500px;
+            transform: translateY(20px);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        #edit-modal.active .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            margin-bottom: 24px;
+        }
+
+        .modal-header h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 32px;
+        }
+
+        .btn-cancel {
+            background: transparent;
+            border: 1px solid var(--border);
+        }
+        .btn-cancel:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Auth Overlay -->
+    <div id="auth-overlay">
+        <div class="auth-card">
+            <h2>Lucy Admin</h2>
+            <p style="color: var(--text-muted); margin-bottom: 24px; font-size: 0.875rem;">Enter password to access dashboard</p>
+            <input type="password" id="admin-pass" placeholder="Password" />
+            <button id="login-btn">Login</button>
+            <p id="auth-error" style="color: var(--danger); margin-top: 16px; font-size: 0.875rem;" class="hidden">Invalid password</p>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <header class="header">
+        <h1>Admin Dashboard</h1>
+        <button class="logout-btn" id="logout-btn">Logout</button>
+    </header>
+
+    <main class="container">
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Device ID</th>
+                        <th>Token Key</th>
+                        <th>Credits</th>
+                        <th>Billing Rate</th>
+                        <th>Decart API Key</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="records-tbody">
+                    <!-- Rows populated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Edit Modal -->
+    <div id="edit-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit User Record</h3>
+                <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 4px;" id="editing-device-id"></p>
+            </div>
+            
+            <div class="form-group">
+                <label>Credits</label>
+                <input type="number" id="edit-credits" placeholder="e.g. 1000" />
+            </div>
+            
+            <div class="form-group">
+                <label>Billing Rate (credits/sec)</label>
+                <input type="number" id="edit-billing" placeholder="e.g. 2" />
+            </div>
+            
+            <div class="form-group">
+                <label>Decart API Key</label>
+                <input type="text" id="edit-decart" placeholder="sk-..." />
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-cancel" id="cancel-edit-btn">Cancel</button>
+                <button id="save-edit-btn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001/api/admin';
+        let currentPassword = localStorage.getItem('lucy_admin_pass') || '';
+        let currentEditDeviceId = null;
+
+        // Elements
+        const authOverlay = document.getElementById('auth-overlay');
+        const loginBtn = document.getElementById('login-btn');
+        const passInput = document.getElementById('admin-pass');
+        const authError = document.getElementById('auth-error');
+        const tbody = document.getElementById('records-tbody');
+        const logoutBtn = document.getElementById('logout-btn');
+        
+        const editModal = document.getElementById('edit-modal');
+        const cancelEditBtn = document.getElementById('cancel-edit-btn');
+        const saveEditBtn = document.getElementById('save-edit-btn');
+        const editCredits = document.getElementById('edit-credits');
+        const editBilling = document.getElementById('edit-billing');
+        const editDecart = document.getElementById('edit-decart');
+        const editingDeviceIdDisplay = document.getElementById('editing-device-id');
+
+        // Init
+        if (currentPassword) {
+            checkAuthAndLoad();
+        }
+
+        // Login
+        loginBtn.addEventListener('click', () => {
+            currentPassword = passInput.value;
+            checkAuthAndLoad();
+        });
+
+        passInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') loginBtn.click();
+        });
+
+        // Logout
+        logoutBtn.addEventListener('click', () => {
+            localStorage.removeItem('lucy_admin_pass');
+            currentPassword = '';
+            authOverlay.classList.remove('hidden');
+            passInput.value = '';
+        });
+
+        async function checkAuthAndLoad() {
+            try {
+                loginBtn.textContent = 'Loading...';
+                const res = await fetch(`${API_BASE}/records`, {
+                    headers: { 'x-admin-password': currentPassword }
+                });
+
+                if (res.ok) {
+                    const records = await res.json();
+                    localStorage.setItem('lucy_admin_pass', currentPassword);
+                    authOverlay.classList.add('hidden');
+                    authError.classList.add('hidden');
+                    renderTable(records);
+                } else {
+                    authError.classList.remove('hidden');
+                    localStorage.removeItem('lucy_admin_pass');
+                    currentPassword = '';
+                    authOverlay.classList.remove('hidden');
+                }
+            } catch (err) {
+                authError.textContent = 'Connection failed';
+                authError.classList.remove('hidden');
+            } finally {
+                loginBtn.textContent = 'Login';
+            }
+        }
+
+        function renderTable(records) {
+            tbody.innerHTML = '';
+            records.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-family: monospace; color: var(--primary);">${r.deviceId}</td>
+                    <td>${r.tokenkey}</td>
+                    <td><span class="badge">${r.creditunits}</span></td>
+                    <td>${r.billingRate || 3}/sec</td>
+                    <td style="font-family: monospace; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        ${r.decartToken === 'YOUR_DECART_API_KEY' ? '<span style="color:#ef4444">Not Set</span>' : r.decartToken}
+                    </td>
+                    <td><button class="btn-edit" onclick="openEdit('${r.deviceId}', ${r.creditunits}, ${r.billingRate || 3}, '${r.decartToken}')">Edit</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        window.openEdit = (deviceId, credits, billing, decartToken) => {
+            currentEditDeviceId = deviceId;
+            editingDeviceIdDisplay.textContent = `Device: ${deviceId}`;
+            editCredits.value = credits;
+            editBilling.value = billing;
+            editDecart.value = decartToken;
+            editModal.classList.add('active');
+        };
+
+        cancelEditBtn.addEventListener('click', () => {
+            editModal.classList.remove('active');
+            currentEditDeviceId = null;
+        });
+
+        saveEditBtn.addEventListener('click', async () => {
+            if (!currentEditDeviceId) return;
+
+            saveEditBtn.textContent = 'Saving...';
+            saveEditBtn.disabled = true;
+
+            try {
+                const res = await fetch(`${API_BASE}/update`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-admin-password': currentPassword
+                    },
+                    body: JSON.stringify({
+                        deviceId: currentEditDeviceId,
+                        creditunits: editCredits.value,
+                        billingRate: editBilling.value,
+                        decartToken: editDecart.value
+                    })
+                });
+
+                if (res.ok) {
+                    editModal.classList.remove('active');
+                    checkAuthAndLoad(); // reload table
+                } else {
+                    alert('Failed to update record');
+                }
+            } catch (err) {
+                alert('Connection error');
+            } finally {
+                saveEditBtn.textContent = 'Save Changes';
+                saveEditBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
