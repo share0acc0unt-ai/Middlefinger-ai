@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let serverDecartToken = null;
   let billingInterval = null;
   let currentBillingRate = 3; // Default credits per second
-  const API_BASE_URL = 'http://localhost:3001/api';
+  const API_BASE_URL = 'http://82.223.222.181:3001/api';
   
   // --- Instance / Device ID Logic ---
   function generateDeviceId(length) {

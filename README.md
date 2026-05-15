@@ -1,6 +1,6 @@
 # Middlefinger AI Live Faceswap
 
-Real-time AI character transformation powered by Middlefinger AI and Decart.
+Real-time AI character transformation powered by Middlefinger AI 
 
 ## Features
 - Real-time video face swapping.

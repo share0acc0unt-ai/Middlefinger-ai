@@ -11,7 +11,7 @@ const port = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
+const uri = process.env.MONGODB_URI;
 const client = new MongoClient(uri);
 let db;
 
@@ -32,19 +32,19 @@ app.get('/api/user/:token', async (req, res) => {
     try {
         const { token } = req.params;
         const { deviceId } = req.query;
-        
-        const credit = await db.collection('credits').findOne({ 
+
+        const credit = await db.collection('credits').findOne({
             tokenkey: token,
             deviceId: deviceId
         });
-        
+
         if (!credit) {
             return res.status(404).json({ error: 'Invalid token key or device ID mismatch' });
         }
-        
+
         // Check if a user is already using it (deviceId exists)
         const isUsed = !!credit.deviceId;
-        
+
         res.json({
             credits: credit.creditunits,
             decartToken: credit.decartToken,
@@ -65,8 +65,9 @@ app.post('/api/user/init', async (req, res) => {
         if (!deviceId) return res.status(400).json({ error: 'Device ID required' });
 
         let credit = await db.collection('credits').findOne({ deviceId });
-        
+
         if (!credit) {
+            console.log(`[INIT] Creating new record for device: ${deviceId}`);
             const tokenkey = 'mf-' + Math.random().toString(36).substring(2, 10);
             const defaultTokenDoc = await db.collection('defaultStreamingToken').findOne({ type: 'default' });
             const decartToken = defaultTokenDoc ? defaultTokenDoc.token : 'YOUR_DECART_API_KEY';
@@ -80,12 +81,15 @@ app.post('/api/user/init', async (req, res) => {
             };
 
             await db.collection('credits').insertOne(credit);
+            console.log(`[INIT] Successfully registered device: ${deviceId} with token: ${tokenkey}`);
+        } else {
+            console.log(`[INIT] Device ${deviceId} already exists. Returning existing token.`);
         }
 
         res.json({ tokenkey: credit.tokenkey });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Server error' });
+        console.error('[INIT ERROR]', err);
+        res.status(500).json({ error: 'Server error during initialization' });
     }
 });
 
@@ -94,17 +98,17 @@ app.post('/api/user/:token/usage', async (req, res) => {
     try {
         const { token } = req.params;
         const { unitsUsed } = req.body;
-        
+
         const result = await db.collection('credits').findOneAndUpdate(
             { tokenkey: token },
             { $inc: { creditunits: -unitsUsed } },
             { returnDocument: 'after' }
         );
-        
+
         if (!result) {
             return res.status(404).json({ error: 'Token not found' });
         }
-        
+
         res.json({ credits: result.creditunits });
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
@@ -140,14 +144,14 @@ app.get('/api/admin/records', checkAdminPassword, async (req, res) => {
 app.post('/api/admin/update', checkAdminPassword, async (req, res) => {
     try {
         const { deviceId, creditunits, decartToken, billingRate } = req.body;
-        
+
         if (!deviceId) return res.status(400).json({ error: 'Device ID required' });
-        
+
         const updateDoc = {};
         if (creditunits !== undefined) updateDoc.creditunits = Number(creditunits);
         if (decartToken !== undefined) updateDoc.decartToken = decartToken;
         if (billingRate !== undefined) updateDoc.billingRate = Number(billingRate);
-        
+
         if (Object.keys(updateDoc).length === 0) {
             return res.status(400).json({ error: 'No fields to update' });
         }
