@@ -314,14 +314,32 @@ document.addEventListener('DOMContentLoaded', () => {
                     body { margin: 0; background: #000; height: 100vh; overflow: hidden; font-family: sans-serif; color: white;}
                     video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; }
                     .loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.5rem; text-align: center; }
-                    .countdown { font-size: 5rem; font-weight: bold; color: #8b5cf6; margin-bottom: 20px;}
+                    .infinity { font-size: 6rem; font-weight: bold; color: #8b5cf6; margin-bottom: 16px; line-height: 1; animation: pulse 2s ease-in-out infinite; }
+                    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+                    #ready-btn {
+                        margin-top: 28px;
+                        padding: 16px 48px;
+                        background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+                        color: white;
+                        border: none;
+                        border-radius: 50px;
+                        font-size: 1.1rem;
+                        font-weight: 700;
+                        letter-spacing: 0.05em;
+                        cursor: pointer;
+                        box-shadow: 0 0 30px rgba(139, 92, 246, 0.5);
+                        transition: transform 0.15s ease, box-shadow 0.15s ease;
+                    }
+                    #ready-btn:hover { transform: scale(1.06); box-shadow: 0 0 50px rgba(139, 92, 246, 0.8); }
+                    #ready-btn:active { transform: scale(0.97); }
                 </style>
             </head>
             <body>
                 <div id="loading" class="loading">
-                    <div class="countdown" id="countdown-text">15</div>
+                    <div class="infinity">&#8734;</div>
                     <div>Waiting for OBS Setup...</div>
-                    <div style="font-size: 1rem; color: #aaa; margin-top: 10px;">Stream & Billing will start automatically</div>
+                    <div style="font-size: 0.95rem; color: #aaa; margin-top: 8px;">Set up your scene, then click the button below</div>
+                    <button id="ready-btn">&#9654; I'm Ready — Start Stream</button>
                 </div>
             </body>
             </html>
@@ -380,20 +398,29 @@ document.addEventListener('DOMContentLoaded', () => {
         ...localStream.getAudioTracks()
       ]);
 
-      // 1.8 Countdown 15 seconds before connecting
-      for (let i = 15; i > 0; i--) {
-        if (!isStreaming) return; // Abort if user clicked disconnect
-        if (outputWindow && !outputWindow.closed) {
-          const countEl = outputWindow.document.getElementById('countdown-text');
-          if (countEl) countEl.innerText = i;
-        }
-        await new Promise(r => setTimeout(r, 1000));
-      }
-      
-      if (!isStreaming) return; // Final abort check
+      // 1.8 Wait for user to click "I'm Ready" in the popup
+      await new Promise((resolve) => {
+        const checkReady = setInterval(() => {
+          if (!isStreaming) { clearInterval(checkReady); resolve(); return; }
+          if (!outputWindow || outputWindow.closed) { clearInterval(checkReady); resolve(); return; }
+          const btn = outputWindow.document.getElementById('ready-btn');
+          if (btn && !btn._listenerAttached) {
+            btn._listenerAttached = true;
+            btn.addEventListener('click', () => {
+              btn.textContent = 'Connecting...';
+              btn.disabled = true;
+              btn.style.opacity = '0.6';
+              clearInterval(checkReady);
+              resolve();
+            });
+          }
+        }, 200);
+      });
+
+      if (!isStreaming) return; // Abort if user clicked disconnect
       if (outputWindow && !outputWindow.closed) {
-        const countEl = outputWindow.document.getElementById('countdown-text');
-        if (countEl) countEl.innerText = 'Connecting...';
+        const loadingEl = outputWindow.document.getElementById('loading');
+        if (loadingEl) loadingEl.innerHTML = '<div style="font-size:1.4rem;color:#8b5cf6;">Connecting to MiddleFinger...</div>';
       }
 
       // 2. Connect to Realtime API
