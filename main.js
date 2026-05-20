@@ -430,7 +430,7 @@ document.addEventListener('DOMContentLoaded', () => {
           // Display in main page as well
           if (remoteVideo) {
             remoteVideo.srcObject = stream;
-            remoteVideo.muted = true; // Mute audio on main page
+            remoteVideo.muted = false; // Play audio on main page
             remoteVideo.classList.remove('hidden');
             remoteVideo.style.objectFit = 'contain';
           }
@@ -443,11 +443,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const popupVideo = document.createElement('video');
             popupVideo.autoplay = true;
             popupVideo.playsInline = true;
-            popupVideo.muted = true; // Hard muted in popup
+            popupVideo.muted = false; // Audio enabled in popup
             popupVideo.srcObject = stream;
             
             popupVideo.onloadedmetadata = () => {
-              popupVideo.play().catch(err => console.error('Play failed:', err));
+              // Attempt autoplay with audio; if blocked, unmute on first user click
+              popupVideo.play().catch(() => {
+                popupVideo.muted = true;
+                popupVideo.play().then(() => {
+                  // Show a click-to-unmute overlay in popup
+                  const unmute = outputWindow.document.createElement('div');
+                  unmute.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(139,92,246,0.9);color:white;padding:10px 24px;border-radius:50px;cursor:pointer;font-family:sans-serif;font-size:0.9rem;z-index:999;';
+                  unmute.textContent = '🔊 Click to enable audio';
+                  unmute.onclick = () => { popupVideo.muted = false; unmute.remove(); };
+                  outputWindow.document.body.appendChild(unmute);
+                });
+              });
             };
             
             outputWindow.document.body.appendChild(popupVideo);
